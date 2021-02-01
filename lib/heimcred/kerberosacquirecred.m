@@ -1,9 +1,9 @@
 /*-
- * Copyright (c) 2016 Kungliga Tekniska Högskolan
+ * Copyright (c) 2013 Kungliga Tekniska Högskolan
  * (Royal Institute of Technology, Stockholm, Sweden).
  * All rights reserved.
  *
- * Portions Copyright (c) 2016 Apple Inc. All rights reserved.
+ * Portions Copyright (c) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,27 +30,32 @@
 #import <TargetConditionals.h>
 
 #import <Foundation/Foundation.h>
-#import <err.h>
+#import <CoreFoundation/CoreFoundation.h>
+#import <CoreFoundation/CFRuntime.h>
 
-#import "aks.h"
+#import "heimcred.h"
+#import "heimbase.h"
+#import "common.h"
+#import "gsscred.h"
 
+/*
+ *
+ */
 
-int
-main(int argc, char **argv)
+void
+_HeimCredRegisterKerberosAcquireCred(void)
 {
-    NSData *clear = [NSData dataWithBytes:"0123456789abcdef0123456789abcde" length:16 + 15];
-    NSData *enc = NULL, *dec = NULL;
-
-    enc = ksEncryptData(clear);
-    if (!enc)
-	errx(1, "ksEncryptData");
-
-    dec = ksDecryptData(enc);
-    if (!dec)
-	errx(1, "ksDecryptData");
-
-    if (![dec isEqualToData:clear])
-	errx(1, "decrypted not same");
-
-    return 0;
+    CFMutableSetRef set = CFSetCreateMutable(NULL, 0, &kCFTypeSetCallBacks);
+    CFMutableDictionaryRef schema;
+    
+    schema = _HeimCredCreateBaseSchema(kHEIMObjectKerberosAcquireCred);
+    
+    CFDictionarySetValue(schema, kHEIMAttrStatus, CFSTR("n"));
+    CFDictionarySetValue(schema, kHEIMAttrExpire, CFSTR("t"));
+    
+    CFSetAddValue(set, schema);
+    CFRELEASE_NULL(schema);
+    
+    _HeimCredRegisterMech(kHEIMTypeKerberosAcquireCred, set, KerberosAcquireCredStatusCallback, NULL, NULL, true, (__bridge CFArrayRef)@[@"fetch", @"query"]);
+    CFRELEASE_NULL(set);
 }

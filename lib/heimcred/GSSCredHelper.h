@@ -1,9 +1,9 @@
 /*-
- * Copyright (c) 2016 Kungliga Tekniska Högskolan
+ * Copyright (c) 2013 Kungliga Tekniska Högskolan
  * (Royal Institute of Technology, Stockholm, Sweden).
  * All rights reserved.
  *
- * Portions Copyright (c) 2016 Apple Inc. All rights reserved.
+ * Portions Copyright (c) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,30 +27,28 @@
  * SUCH DAMAGE.
  */
 
-#import <TargetConditionals.h>
-
 #import <Foundation/Foundation.h>
-#import <err.h>
+#import "krb5.h"
+#import <os/log.h>
 
-#import "aks.h"
+NS_ASSUME_NONNULL_BEGIN
 
+os_log_t GSSHelperOSLog(void);
 
-int
-main(int argc, char **argv)
-{
-    NSData *clear = [NSData dataWithBytes:"0123456789abcdef0123456789abcde" length:16 + 15];
-    NSData *enc = NULL, *dec = NULL;
+@interface GSSHelperPeer : NSObject
 
-    enc = ksEncryptData(clear);
-    if (!enc)
-	errx(1, "ksEncryptData");
+@property (nonatomic) xpc_connection_t conn;
+@property (nonatomic) NSString *bundleIdentifier;
+@property (nonatomic) uid_t session;
 
-    dec = ksDecryptData(enc);
-    if (!dec)
-	errx(1, "ksDecryptData");
+@end
 
-    if (![dec isEqualToData:clear])
-	errx(1, "decrypted not same");
+//This is called by GSSCred when a session is joined from itself
+@interface GSSCredHelper : NSObject
 
-    return 0;
-}
++ (void)do_Acquire:(GSSHelperPeer *)peer request:(xpc_object_t) request reply:(xpc_object_t) reply;
++ (void)do_Refresh:(GSSHelperPeer *)peer request:(xpc_object_t) request reply:(xpc_object_t) reply;
+
+@end
+
+NS_ASSUME_NONNULL_END
